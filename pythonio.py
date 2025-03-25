@@ -1,206 +1,215 @@
-# Media files taken from "Snake III" game 
-
-import pygame, random, time, sys
-from threading import Timer
-
+import pygame
+from random import randint
 pygame.init()
-    
-# Window resolution (HD)
-res = w, h = 700, 700
 
-# FPS
-FPS = 60
-FramePerSec = pygame.time.Clock()
-
-# Predefined some colors
-BLUE  = (0, 0, 255)
-RED   = (255, 0, 0)
-GREEN = (0, 255, 0)
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
+LINE_COLOR = (50, 50, 50)
+font = pygame.font.SysFont("Verdana", 20)
 
-# Some variables
-SPEED = 10
-SCORE = 0
+HEIGHT = 500
+WIDTH = 500
+WIDTHSCREEN = 700
+
+BLOCK_SIZE = 20
+
+
+class Point:
+    def __init__(self, _x, _y):
+        self.x = _x
+        self.y = _y
+        
+class Food:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.location = Point(self.x, self.y)
+        
+    def draw(self):
+        point = self.location
+        rect = pygame.Rect(BLOCK_SIZE * point.x, BLOCK_SIZE * point.y, BLOCK_SIZE, BLOCK_SIZE)
+        pygame.draw.rect(SCREEN, (0, 255, 0), rect)
+        
+    def respawn(self, dx, dy):
+        self.dx = dx
+        self.dy = dy
+        self.location = Point(self.dx, self.dy)
+        
+class Speed:
+    def __init__(self):
+        self.x = randint(2, 22)
+        self.y = randint(2, 22)
+        self.location = Point(self.x, self.y)
+    
+    def draw(self):
+        point = self.location
+        rect = pygame.Rect(BLOCK_SIZE * point.x, BLOCK_SIZE * point.y, BLOCK_SIZE, BLOCK_SIZE)
+        pygame.draw.rect(SCREEN, (255, 255, 0), rect)
+
+class Block:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.location = Point(self.x, self.y)
+        
+    def draw(self):
+        point = self.location
+        rect = pygame.Rect(BLOCK_SIZE * point.x, BLOCK_SIZE * point.y, BLOCK_SIZE, BLOCK_SIZE)
+        pygame.draw.rect(SCREEN, (0, 0, 255), rect)
+
+        
+        
+
+class Snake:
+    def __init__(self):
+        self.body = [Point(10, 11)]
+        self.dx = 0
+        self.dy = 0
+
+    def move(self):    
+        for i in range(len(self.body) - 1, 0, -1):
+            self.body[i].x = self.body[i-1].x
+            self.body[i].y = self.body[i-1].y
+
+        self.body[0].x += self.dx 
+        self.body[0].y += self.dy 
+
+        if self.body[0].x * BLOCK_SIZE > WIDTH:
+            self.body[0].x = 0
+        
+        if self.body[0].y * BLOCK_SIZE > HEIGHT:
+            self.body[0].y = 0
+
+        if self.body[0].x < 0:
+            self.body[0].x = WIDTH / BLOCK_SIZE
+        
+        if self.body[0].y < 0:
+            self.body[0].y = HEIGHT / BLOCK_SIZE
+
+    def draw(self):
+        point = self.body[0]
+        rect = pygame.Rect(BLOCK_SIZE * point.x, BLOCK_SIZE * point.y, BLOCK_SIZE, BLOCK_SIZE)
+        pygame.draw.rect(SCREEN, (255, 0, 0), rect)
+
+
+        for point in self.body[1:]:
+            rect = pygame.Rect(BLOCK_SIZE * point.x, BLOCK_SIZE * point.y, BLOCK_SIZE, BLOCK_SIZE)
+            pygame.draw.rect(SCREEN, (0, 255, 0), rect)
+
+    def check_collision(self, food, block, speeds):
+        if self.body[0].x == food.location.x:
+            if self.body[0].y == food.location.y:
+                global SCORE, count
+                count = 0
+                
+                SCORE+=randint(1, 3)
+                self.body.append(Point(food.location.x, food.location.y))
+                if food.location.x != block.x and food.location.y != block.y:
+                    food.location.x, food.location.y = randint(2, 22), randint(2, 22)
+        if self.body[0].x == speeds.location.x:
+            if self.body[0].y == speeds.location.y:
+                global LEVEL, FPS, level
+                level+=1
+                level%=2
+                LEVEL+=1
+                if speeds.location.x != block.x and speeds.location.y != block.y:
+                    speeds.location.x, speeds.location.y = randint(2, 22), randint(2, 22)
+restart = True
+
+def drawGrid():
+    for x in range(0, WIDTH, BLOCK_SIZE):
+        for y in range(0, HEIGHT, BLOCK_SIZE):
+            rect = pygame.Rect(x, y, BLOCK_SIZE, BLOCK_SIZE)
+            pygame.draw.rect(SCREEN, LINE_COLOR, rect, 1)
+            
+level = 0
 LEVEL = 0
-x = 0
+SCORE = 0
 
-# Creating a green screen and caption of game
-pygame.display.set_caption("Snakes III?")
-pygame.display.set_icon(pygame.image.load("tsis8/snake/icon.png"))
-DISPLAYSURF = pygame.display.set_mode((res))
 
-startdirection = 'RIGHT'
-direction = startdirection
+while restart:
+    global SCREEN, FPS
+    SCREEN = pygame.display.set_mode((WIDTHSCREEN, HEIGHT))
+    pygame.display.set_caption("Snake")
+    CLOCK = pygame.time.Clock()
+    FPS = 5
+    DICT = {}
+    count = 0
+    block = Block(0, 0)
+    snake = Snake()
+    food = Food(randint(1, 25), randint(1, 25))
+    speeds = Speed()
+    running = True
+    lose = False
+    while running: 
+        CLOCK.tick(FPS)
+        SCREEN.fill(WHITE)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                restart = not restart
+                running = not running
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHT:
+                snake.dx = 1
+                snake.dy = 0
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_LEFT:
+                snake.dx = -1
+                snake.dy = 0
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_UP:
+                snake.dx = 0
+                snake.dy = -1
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN:
+                snake.dx = 0
+                snake.dy = 1
 
-#sanek
-snake_pos = [50, 50]
-snake_body = [[50, 50],[40, 50]]
 
-# fruit
-fruit = pygame.transform.scale(pygame.image.load("tsis8/snake/food.png"), (20, 10))
-fruit_pos = [random.randrange(1, (w//10)) * 10, random.randrange(1, (h//10)) * 10]
-fruit_spawn = True
-# fruit2
-fruit2 = pygame.transform.scale(pygame.image.load("tsis8/snake/food2.png"), (20, 10))
-fruit2_pos = [random.randrange(1, (w//10)) * 10, random.randrange(1, (h//10)) * 10]
-fruit2_spawn = True
-# fruit3
-fruit3 = pygame.transform.scale(pygame.image.load("tsis8/snake/food3.png"), (20, 10))
-fruit3_pos = [random.randrange(1, (w//10)) * 10, random.randrange(1, (h//10)) * 10]
-fruit3_spawn = True
-# fruit4
-fruit4 = pygame.transform.scale(pygame.image.load("tsis8/snake/food4.png"), (20, 10))
-fruit4_pos = [random.randrange(1, (w//10)) * 10, random.randrange(1, (h//10)) * 10]
-fruit4_spawn = True
+        wallsCoor = open(f"level{level}.txt", 'r').readlines()
+        walls = []
+        for i, line in enumerate(wallsCoor):
+            for j, each in enumerate(line):
+                if each == "#":
+                    walls.append(Block(j, i))
+        
+        
+        drawGrid()
+        for block in walls:
+            block.draw()
+            if snake.body[0].x == block.x and snake.body[0].y == block.y:
+                restart = not restart
+                running = not running
+            if food.x != block.x and food.y != block.y:
+                food.draw()
+            if SCORE >= 5 and level != 1:
+                if speeds.x != block.x and speeds.y != block.y:
+                    speeds.draw()
+        
+        
+        
+            
+        
+            
+        snake.move()
 
-def score(SCORE, LEVEL):
-   
-    font = pygame.font.SysFont("Verdana", 15)
-     
-    score_surface = font.render("Score : " + str(SCORE), True, BLACK)
-    level_surface = font.render("Level : " + str(LEVEL), True, BLACK)
-    
-    score_rect = score_surface.get_rect()
+        snake.check_collision(food, block, speeds)
+        snake.draw()
+        
+        if SCORE > 0 and SCORE % 5 == 0:
+            SCORE+=1
+            LEVEL+=1
+            FPS+=5
+            
+        count += (FPS % 3)
+        if count % 100 == 0 and count > 0:
+            food.respawn(randint(2, 22), randint(2, 22))
+        
+        #Text------------------------------
+        score_img = font.render(f"{SCORE}", True, BLACK)
+        coins_cnt = font.render(f"{LEVEL}", False, False)
+        SCREEN.blit(font.render(f"SCORE", True, BLACK), (565, 25))
+        SCREEN.blit(font.render("LEVEL", True, BLACK), (570, 135))
+        SCREEN.blit(score_img, score_img.get_rect(center=(600, 65)))
+        SCREEN.blit(coins_cnt, coins_cnt.get_rect(center=(600, 170)))
+        
 
-    DISPLAYSURF.blit(score_surface, score_rect)
-    DISPLAYSURF.blit(level_surface, (200, 0))
-
-def win():
-    DISPLAYSURF.fill(BLUE)
-    font = pygame.font.SysFont("Verdana", 15)
-    win_surface = font.render("You won! You are going to the level " + str(LEVEL), True, BLACK)
-    win_rect = win_surface.get_rect()
-    pygame.mixer.Sound("tsis8/snake/win.mp3").play()
-    DISPLAYSURF.blit(win_surface, win_rect)
+        pygame.display.flip()
     pygame.display.flip()
-
-    time.sleep(6)
-    DISPLAYSURF.fill(GREEN)
-
-def game_over():
-    DISPLAYSURF.fill(RED)
-    font = pygame.font.SysFont("Verdana", 15)
-    game_over_surface = font.render("You lost! Your Score is: " + str(SCORE), True, BLACK)
-    game_over_rect = game_over_surface.get_rect()
-    game_over_rect.midtop = (w/2, h/3)
-    
-    pygame.mixer.Sound("tsis8/snake/gameover.mp3").play()
-    DISPLAYSURF.blit(game_over_surface, game_over_rect)
-    pygame.display.flip()
-
-    time.sleep(6)
-    pygame.quit()
-    sys.exit()
-
-def killfood():
-    pygame.draw.rect(DISPLAYSURF, GREEN, (fruit4_pos[0]-7.5, fruit4_pos[1]-7.5, 20, 20))
-    fruit4_spawn = False
-
-LIFETIME = Timer(10 * 60, killfood())
-LIFETIME.start()
-# Game loop
-while True:
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            exit()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                direction = 'UP'
-            if event.key == pygame.K_DOWN:
-                direction = 'DOWN'
-            if event.key == pygame.K_LEFT:
-                direction = 'LEFT'
-            if event.key == pygame.K_RIGHT:
-                direction = 'RIGHT'
-    
-    if direction == 'UP' and startdirection != 'DOWN':
-        startdirection = 'UP'
-    if direction == 'DOWN' and startdirection != 'UP':
-        startdirection = 'DOWN'
-    if direction == 'LEFT' and startdirection != 'RIGHT':
-        startdirection = 'LEFT'
-    if direction == 'RIGHT' and startdirection != 'LEFT':
-        startdirection = 'RIGHT'
-
-    
-    if startdirection == 'UP':
-        snake_pos[1] -= 10
-    if startdirection == 'DOWN':
-        snake_pos[1] += 10
-    if startdirection == 'LEFT':
-        snake_pos[0] -= 10
-    if startdirection == 'RIGHT':
-        snake_pos[0] += 10
-
-    
-    snake_body.insert(0, list(snake_pos))
-    
-    if snake_pos[0] == fruit_pos[0] and snake_pos[1] == fruit_pos[1]:
-        SCORE += 1
-        x+=1
-        fruit_spawn = False
-        pygame.mixer.Sound("tsis8/snake/newfood.mp3").play()
-    elif snake_pos[0] == fruit2_pos[0] and snake_pos[1] == fruit2_pos[1]:
-        SCORE += 2
-        x+=2
-        fruit2_spawn = False
-        pygame.mixer.Sound("tsis8/snake/newfood.mp3").play()
-    elif snake_pos[0] == fruit3_pos[0] and snake_pos[1] == fruit3_pos[1]:
-        SCORE += 1
-        x+=1
-        fruit3_spawn = False
-        pygame.mixer.Sound("tsis8/snake/newfood.mp3").play()
-    elif snake_pos[0] == fruit4_pos[0] and snake_pos[1] == fruit4_pos[1]:
-        SCORE += 3
-        x+=3
-        fruit4_spawn = False
-        LIFETIME = Timer(10 * 60, killfood())
-        LIFETIME.start()
-        pygame.mixer.Sound("tsis8/snake/newfood.mp3").play()
-    else:
-        snake_body.pop()
-
-    DISPLAYSURF.fill(GREEN)
-
-    if not fruit_spawn:
-        fruit_pos = [random.randrange(1, (w//10)) * 10, random.randrange(1, (h//10)) * 10]
-    fruit_spawn = True	
-    DISPLAYSURF.blit(fruit, (fruit_pos[0]-7.5, fruit_pos[1]-7.5))
-    if not fruit2_spawn:
-        fruit2_pos = [random.randrange(1, (w//10)) * 10, random.randrange(1, (h//10)) * 10]
-    fruit2_spawn = True	
-    DISPLAYSURF.blit(fruit2, (fruit2_pos[0]-7.5, fruit2_pos[1]-7.5))
-    if not fruit3_spawn:
-        fruit3_pos = [random.randrange(1, (w//10)) * 10, random.randrange(1, (h//10)) * 10]
-    fruit3_spawn = True	
-    DISPLAYSURF.blit(fruit3, (fruit3_pos[0]-7.5, fruit3_pos[1]-7.5))
-    if not fruit4_spawn:
-        fruit4_pos = [random.randrange(1, (w//10)) * 10, random.randrange(1, (h//10)) * 10]
-    fruit4_spawn = True	
-    DISPLAYSURF.blit(fruit4, (fruit4_pos[0]-7.5, fruit4_pos[1]-7.5))
-    
-    for pos in range(len(snake_body)):
-        if pos == 0:
-            pygame.draw.circle(DISPLAYSURF, RED, (snake_body[pos][0], snake_body[pos][1]), 7.5)
-        else:
-            pygame.draw.circle(DISPLAYSURF, BLUE, (snake_body[pos][0], snake_body[pos][1]), 7.5)
-
-    # border
-    if snake_pos[0] < 0 or snake_pos[0] > w-10:
-        game_over()
-    if snake_pos[1] < 0 or snake_pos[1] > h-10:
-        game_over()
-
-    # 5 fruits => next level + increase speed
-    if x>=5:
-        SPEED+=3
-        LEVEL+=1
-        x=0
-        win()
-    score(SCORE, LEVEL)
-
-
-    pygame.display.update()
-    FramePerSec.tick(FPS)
+pygame.quit()
